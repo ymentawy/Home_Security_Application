@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "767101878945",
+    "project_id": "home-security-6b106",
+    "storage_bucket": "home-security-6b106.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767101878945:android:e194159bc69bbaae81e6e0",
+        "android_client_info": {
+          "package_name": "com.example.home_security"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjBHqFMe_0Z3s5MnPu9Q2lYAHNXxWurro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767101878945:android:cbf778d7edd6c81b81e6e0",
+        "android_client_info": {
+          "package_name": "com.example.home_security_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjBHqFMe_0Z3s5MnPu9Q2lYAHNXxWurro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
