@@ -42,12 +42,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBlwwXgo4YABSb0l79pA7EWMSdqGrimwEw',
-    appId: '1:767101878945:web:958b8064291e379881e6e0',
+    appId: '1:767101878945:web:7cf108ab98e7af2e81e6e0',
     messagingSenderId: '767101878945',
     projectId: 'home-security-6b106',
     authDomain: 'home-security-6b106.firebaseapp.com',
     storageBucket: 'home-security-6b106.firebasestorage.app',
-    measurementId: 'G-F3H8ELSXD1',
+    measurementId: 'G-0QHXS8R6RB',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -64,6 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '767101878945',
     projectId: 'home-security-6b106',
     storageBucket: 'home-security-6b106.firebasestorage.app',
+    iosClientId: '767101878945-c4sucjdi5huqe1ejmd2p89nbfkueo5sh.apps.googleusercontent.com',
     iosBundleId: 'com.example.homeSecurity',
   );
 
@@ -73,6 +74,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '767101878945',
     projectId: 'home-security-6b106',
     storageBucket: 'home-security-6b106.firebasestorage.app',
+    iosClientId: '767101878945-c4sucjdi5huqe1ejmd2p89nbfkueo5sh.apps.googleusercontent.com',
     iosBundleId: 'com.example.homeSecurity',
   );
 
@@ -85,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'home-security-6b106.firebasestorage.app',
     measurementId: 'G-0QHXS8R6RB',
   );
+
 }
