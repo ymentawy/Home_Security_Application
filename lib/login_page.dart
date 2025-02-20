@@ -163,10 +163,10 @@ class _LoginPageState extends State<LoginPage> {
               SizedBox(height: 30),
               ElevatedButton(
                 onPressed: loginWithEmailPassword,
-                child: Text("Login"),
                 style: ElevatedButton.styleFrom(
                   minimumSize: Size(double.infinity, 50),
                 ),
+                child: Text("Login"),
               ),
               SizedBox(height: 20),
               ElevatedButton.icon(

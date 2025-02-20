@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'login_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -27,14 +29,12 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     try {
-      // Create a new user
       UserCredential userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // Save additional user data to Firestore
       await _saveUserData(userCredential.user!.uid);
 
       _showSnackBar("Signup successful! Please log in.");
@@ -49,37 +49,91 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> signupWithGoogle() async {
     try {
-      final GoogleAuthProvider authProvider = GoogleAuthProvider();
+      UserCredential userCredential;
 
-      // Use signInWithPopup for web to authenticate
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithPopup(authProvider);
+      if (kIsWeb) {
+        // Web-specific sign in
+        GoogleAuthProvider authProvider = GoogleAuthProvider();
+        userCredential =
+            await FirebaseAuth.instance.signInWithPopup(authProvider);
+      } else {
+        // Mobile/Desktop sign in
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+        if (googleUser == null) {
+          _showSnackBar("Google sign in canceled");
+          return;
+        }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+      }
 
       final user = userCredential.user;
-
       if (user != null) {
-        // Prompt user to complete profile data
-        await _collectAdditionalInfo(user);
+        // Show loading indicator
+        _showLoadingDialog();
 
-        _showSnackBar("Signup successful! Please log in.");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
-        );
+        try {
+          // Check if user profile exists
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (!userDoc.exists) {
+            // Hide loading indicator before showing dialog
+            Navigator.pop(context);
+            // Collect additional info if profile doesn't exist
+            await _collectAdditionalInfo(user);
+          } else {
+            // Hide loading indicator
+            Navigator.pop(context);
+            _showSnackBar("Signup successful! Please log in.");
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginPage()),
+            );
+          }
+        } catch (e) {
+          // Hide loading indicator if error occurs
+          Navigator.pop(context);
+          throw e;
+        }
       }
     } catch (e) {
       _showSnackBar(e.toString());
     }
   }
 
-  Future<void> _collectAdditionalInfo(User user) async {
-    await showDialog(
+  void _showLoadingDialog() {
+    showDialog(
       context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Future<void> _collectAdditionalInfo(User user) async {
+    bool? completed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: Text("Complete Your Profile"),
           content: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildTextField(
                   controller: firstNameController,
@@ -114,19 +168,12 @@ class _SignupPageState extends State<SignupPage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context, false); // Data incomplete
+                Navigator.pop(context, false);
               },
               child: Text("Cancel"),
             ),
             ElevatedButton(
               onPressed: () {
-                // Debug: Log field values
-                print("First Name: ${firstNameController.text}");
-                print("Last Name: ${lastNameController.text}");
-                print("Phone: ${phoneController.text}");
-                print("Address: ${addressController.text}");
-                print("Zip Code: ${zipCodeController.text}");
-
                 if (firstNameController.text.trim().isEmpty ||
                     lastNameController.text.trim().isEmpty ||
                     phoneController.text.trim().isEmpty ||
@@ -137,8 +184,7 @@ class _SignupPageState extends State<SignupPage> {
                   );
                   return;
                 }
-
-                Navigator.pop(context, true); // Data complete
+                Navigator.pop(context, true);
               },
               child: Text("Save"),
             ),
@@ -147,13 +193,13 @@ class _SignupPageState extends State<SignupPage> {
       },
     );
 
-    if (firstNameController.text.trim().isNotEmpty &&
-        lastNameController.text.trim().isNotEmpty &&
-        phoneController.text.trim().isNotEmpty &&
-        addressController.text.trim().isNotEmpty &&
-        zipCodeController.text.trim().isNotEmpty) {
-      // Save user data in Firestore
+    if (completed == true) {
       await _saveUserData(user.uid);
+      _showSnackBar("Signup successful! Please log in.");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
     } else {
       await FirebaseAuth.instance.signOut();
       _showSnackBar("Signup canceled due to incomplete information.");
@@ -246,12 +292,19 @@ class _SignupPageState extends State<SignupPage> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: signupWithEmailPassword,
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50),
+              ),
               child: Text("Sign Up"),
             ),
+            SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: signupWithGoogle,
               icon: Icon(Icons.login),
               label: Text("Sign up with Google"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50),
+              ),
             ),
           ],
         ),
