@@ -106,7 +106,7 @@ class _SignupPageState extends State<SignupPage> {
         } catch (e) {
           // Hide loading indicator if error occurs
           Navigator.pop(context);
-          throw e;
+          rethrow;
         }
       }
     } catch (e) {

@@ -1,0 +1,2 @@
+C:/Users/dell/home_security/android/app/.cxx/RelWithDebInfo/442u6w4f/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/dell/home_security/android/app/.cxx/RelWithDebInfo/442u6w4f/arm64-v8a/CMakeFiles/rebuild_cache.dir
