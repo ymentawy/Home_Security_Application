@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:home_security/main.dart'; // Make sure this import path is correct.
+import 'package:NeuroVision/main.dart'; // Adjust the import path to the correct location.
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

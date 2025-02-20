@@ -130,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               SizedBox(height: MediaQuery.of(context).size.height * 0.15),
               Text(
-                "NEUROVISION",
+                "NeuroVision",
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 40),

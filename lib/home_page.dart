@@ -12,13 +12,8 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('NEUROVISION'),
-      ),
-      drawer: AppDrawer(
-        user: user,
-        userProfile: userProfile,
-      ), // AppDrawer for navigation
+      appBar: AppBar(title: Text('NEUROVISION')),
+      drawer: AppDrawer(user: user, userProfile: userProfile),
       body: Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
