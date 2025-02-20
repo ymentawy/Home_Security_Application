@@ -13,7 +13,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Security System'),
+        title: Text('NEUROVISION'),
       ),
       drawer: AppDrawer(
         user: user,
@@ -40,7 +40,7 @@ class HomePage extends StatelessWidget {
                         builder: (context) => CameraStream(cameraId: 1)),
                   );
                 },
-                child: Text("View Camera 1"),
+                child: Text("Main Camera"),
               ),
               SizedBox(height: 20),
               ElevatedButton(
@@ -52,7 +52,7 @@ class HomePage extends StatelessWidget {
                             CameraStream(cameraId: 2, isPTZ: true)),
                   );
                 },
-                child: Text("View Camera 2 (PTZ)"),
+                child: Text("PTZ Camera"),
               ),
             ],
           ),
