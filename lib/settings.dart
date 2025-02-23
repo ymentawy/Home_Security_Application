@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'change_password_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -20,12 +23,89 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isNotificationsEnabled = true;
   String language = "English";
 
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   @override
   void initState() {
     super.initState();
     isDarkMode = widget.isDarkMode;
+    _requestNotificationPermission(); // Request notification permission
+    _initializeNotifications();
+    _loadNotificationPreference();
   }
 
+  /// Request notification permission (Android 13+)
+  void _requestNotificationPermission() async {
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+  }
+
+  /// Initializes notifications and sets up a notification channel
+  void _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'notifications_channel',
+      'App Notifications',
+      description: 'This channel is used for app notifications.',
+      importance: Importance.high,
+    );
+
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidImplementation?.createNotificationChannel(channel);
+  }
+
+  /// Shows a notification when notifications are enabled
+  Future<void> _showNotification() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'notifications_channel',
+      'App Notifications',
+      channelDescription: 'This channel is used for general notifications.',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Notifications Enabled',
+      'You will now receive notifications.',
+      notificationDetails,
+    );
+  }
+
+  /// Loads the saved notification preference
+  Future<void> _loadNotificationPreference() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isNotificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+    });
+  }
+
+  /// Saves the notification preference
+  Future<void> _saveNotificationPreference(bool value) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', value);
+  }
+
+  /// Handles Factory Reset
   void factoryReset() {
     showDialog(
       context: context,
@@ -47,6 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 language = "English";
               });
               widget.onDarkModeChanged(false);
+              _saveNotificationPreference(true);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text("Factory reset completed!")),
@@ -59,6 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// Navigates to Change Password Page
   void navigateToChangePassword() {
     Navigator.push(
       context,
@@ -88,6 +170,10 @@ class _SettingsPageState extends State<SettingsPage> {
             onChanged: (value) {
               setState(() {
                 isNotificationsEnabled = value;
+                _saveNotificationPreference(value);
+                if (value) {
+                  _showNotification();
+                }
               });
             },
             title: Text('Enable Notifications'),
