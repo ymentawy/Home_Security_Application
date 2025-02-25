@@ -22,18 +22,21 @@ class _CameraStreamState extends State<CameraStream> {
     _initializeVideo();
   }
 
+  /// 🚀 Modular function to get the correct stream URL based on `cameraId`
+  String _getStreamUrl() {
+    // 🔹 Both Main Camera & PTZ Camera now use OBS HLS
+    return "http://IP:8080/hls/test.m3u8"; // OBS HLS URL
+  }
+
   void _initializeVideo() {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    // Replace with actual RTSP/HTTP URL from Raspberry Pi
-    String streamUrl = widget.cameraId == 1
-        ? "http://raspberrypi.local:8080/stream1"
-        : "http://raspberrypi.local:8080/stream2";
+    String streamUrl = _getStreamUrl(); // Get the correct URL dynamically
 
-    _controller = VideoPlayerController.network(streamUrl)
+    _controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl))
       ..initialize().then((_) {
         setState(() {
           _isLoading = false;
@@ -42,7 +45,7 @@ class _CameraStreamState extends State<CameraStream> {
       }).catchError((error) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Failed to load video. Please check the connection.";
+          _errorMessage = "Failed to load stream. Please check the connection.";
         });
       });
   }
@@ -61,31 +64,42 @@ class _CameraStreamState extends State<CameraStream> {
         children: [
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : _errorMessage != null
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.error, color: Colors.red, size: 50),
-                            SizedBox(height: 10),
-                            Text(_errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.red)),
-                            SizedBox(height: 20),
+                            const Icon(Icons.error,
+                                color: Colors.red, size: 50),
+                            const SizedBox(height: 10),
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                            const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: _initializeVideo,
-                              child: Text("Retry"),
+                              child: const Text("Retry"),
                             ),
                           ],
                         ),
                       )
-                    : AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
-                        child: VideoPlayer(_controller),
+                    : Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.cover, // 🔥 Fixes aspect ratio issue
+                          child: SizedBox(
+                            width: _controller.value.size.width,
+                            height: _controller.value.size.height,
+                            child: VideoPlayer(_controller),
+                          ),
+                        ),
                       ),
           ),
-          if (widget.isPTZ) PTZControls(),
+          if (widget.isPTZ) const PTZControls(),
         ],
       ),
     );
@@ -96,45 +110,45 @@ class PTZControls extends StatelessWidget {
   const PTZControls({super.key});
 
   void sendPTZCommand(String command) {
-    // TODO: Implement API call to Raspberry Pi for PTZ control
+    // TODO: Implement API call for PTZ control in the future
     print("PTZ Command Sent: $command");
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(8.0),
       color: Colors.grey[200],
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           ElevatedButton(
             onPressed: () => sendPTZCommand('pan_left'),
-            child: Icon(Icons.arrow_left),
+            child: const Icon(Icons.arrow_left),
           ),
           Column(
             children: [
               ElevatedButton(
                 onPressed: () => sendPTZCommand('tilt_up'),
-                child: Icon(Icons.arrow_drop_up),
+                child: const Icon(Icons.arrow_drop_up),
               ),
               ElevatedButton(
                 onPressed: () => sendPTZCommand('zoom_in'),
-                child: Icon(Icons.zoom_in),
+                child: const Icon(Icons.zoom_in),
               ),
               ElevatedButton(
                 onPressed: () => sendPTZCommand('zoom_out'),
-                child: Icon(Icons.zoom_out),
+                child: const Icon(Icons.zoom_out),
               ),
               ElevatedButton(
                 onPressed: () => sendPTZCommand('tilt_down'),
-                child: Icon(Icons.arrow_drop_down),
+                child: const Icon(Icons.arrow_drop_down),
               ),
             ],
           ),
           ElevatedButton(
             onPressed: () => sendPTZCommand('pan_right'),
-            child: Icon(Icons.arrow_right),
+            child: const Icon(Icons.arrow_right),
           ),
         ],
       ),

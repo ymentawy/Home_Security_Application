@@ -12,42 +12,52 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('NEUROVISION')),
+      appBar: AppBar(title: const Text('NEUROVISION')),
       drawer: AppDrawer(user: user, userProfile: userProfile),
       body: Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 "Welcome, ${userProfile?['name'] ?? user?.email ?? "User"}",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
-              SizedBox(height: 20),
-              Text("Select a Camera to View"),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
+              const Text("Select a Camera to View",
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+
+              // Main Camera (OBS HLS)
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => CameraStream(cameraId: 1)),
+                      builder: (context) => const CameraStream(cameraId: 1),
+                    ),
                   );
                 },
-                child: Text("Main Camera"),
+                child: const Text("Main Camera"),
               ),
-              SizedBox(height: 20),
+
+              const SizedBox(height: 20),
+
+              // PTZ Camera (OBS HLS)
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            CameraStream(cameraId: 2, isPTZ: true)),
+                      builder: (context) =>
+                          const CameraStream(cameraId: 2, isPTZ: true),
+                    ),
                   );
                 },
-                child: Text("PTZ Camera"),
+                child: const Text("PTZ Camera"),
               ),
             ],
           ),
