@@ -25,7 +25,7 @@ class _CameraStreamState extends State<CameraStream> {
   /// 🚀 Modular function to get the correct stream URL based on `cameraId`
   String _getStreamUrl() {
     // 🔹 Both Main Camera & PTZ Camera now use OBS HLS
-    return "http://IP:8080/hls/test.m3u8"; // OBS HLS URL
+    return "http://192.168.1.14:8080/hls/test.m3u8"; // OBS HLS URL
   }
 
   void _initializeVideo() {
@@ -86,16 +86,10 @@ class _CameraStreamState extends State<CameraStream> {
                           ],
                         ),
                       )
-                    : Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: FittedBox(
-                          fit: BoxFit.cover, // 🔥 Fixes aspect ratio issue
-                          child: SizedBox(
-                            width: _controller.value.size.width,
-                            height: _controller.value.size.height,
-                            child: VideoPlayer(_controller),
-                          ),
+                    : Center(
+                        child: AspectRatio(
+                          aspectRatio: _controller.value.aspectRatio,
+                          child: VideoPlayer(_controller),
                         ),
                       ),
           ),
