@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:mjpeg_stream/mjpeg_stream.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CameraStream extends StatefulWidget {
   final int cameraId;
@@ -7,64 +9,36 @@ class CameraStream extends StatefulWidget {
   final String? initialStreamUrl;
 
   const CameraStream({
-    super.key,
+    Key? key,
     required this.cameraId,
     this.isPTZ = false,
     this.initialStreamUrl,
-  });
+  }) : super(key: key);
 
   @override
   _CameraStreamState createState() => _CameraStreamState();
 }
 
 class _CameraStreamState extends State<CameraStream> {
-  late VideoPlayerController _controller;
-  bool _isLoading = true;
-  String? _errorMessage;
   late TextEditingController _urlController;
   late String _currentStreamUrl;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with provided URL or default
+    // Initialize with provided URL or default MJPEG URL
     _currentStreamUrl = widget.initialStreamUrl ?? _getDefaultStreamUrl();
     _urlController = TextEditingController(text: _currentStreamUrl);
-    _initializeVideo();
   }
 
-  /// Get the default stream URL based on cameraId
+  /// Get the default stream URL (MJPEG stream URL)
   String _getDefaultStreamUrl() {
-    // Default OBS HLS URL
-    return "http://10.40.34.164:8080/hls/test.m3u8";
-  }
-
-  void _initializeVideo() {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    _controller = VideoPlayerController.networkUrl(Uri.parse(_currentStreamUrl))
-      ..initialize().then((_) {
-        setState(() {
-          _isLoading = false;
-        });
-        _controller.play();
-      }).catchError((error) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage =
-              "Failed to load stream. Please check the URL or connection.";
-        });
-      });
+    return "http://10.40.42.211:8000";
   }
 
   void _updateStream() {
-    // Get the new URL from the text controller
     final newUrl = _urlController.text.trim();
 
-    // Check if URL is valid
     if (newUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid URL')),
@@ -72,26 +46,20 @@ class _CameraStreamState extends State<CameraStream> {
       return;
     }
 
-    // Dispose of the old controller
-    _controller.dispose();
-
-    // Update the current URL and reinitialize
     setState(() {
       _currentStreamUrl = newUrl;
     });
-
-    _initializeVideo();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _urlController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Layout: URL input at the top, MJPEG stream in the middle, and PTZ controls (if enabled) at the bottom.
     return Scaffold(
       appBar: AppBar(title: Text('Camera ${widget.cameraId}')),
       body: Column(
@@ -107,7 +75,7 @@ class _CameraStreamState extends State<CameraStream> {
                     decoration: const InputDecoration(
                       labelText: 'Stream URL',
                       border: OutlineInputBorder(),
-                      hintText: 'Enter stream URL (HLS, RTSP, etc.)',
+                      hintText: 'Enter MJPEG stream URL',
                     ),
                     onSubmitted: (_) => _updateStream(),
                   ),
@@ -120,40 +88,18 @@ class _CameraStreamState extends State<CameraStream> {
               ],
             ),
           ),
-
-          // Video Player
+          // MJPEG Stream Display
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _errorMessage != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error,
-                                color: Colors.red, size: 50),
-                            const SizedBox(height: 10),
-                            Text(
-                              _errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                            const SizedBox(height: 20),
-                            ElevatedButton(
-                              onPressed: _initializeVideo,
-                              child: const Text("Retry"),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Center(
-                        child: AspectRatio(
-                          aspectRatio: _controller.value.aspectRatio,
-                          child: VideoPlayer(_controller),
-                        ),
-                      ),
+            child: Center(
+              child: MJPEGStreamScreen(
+                streamUrl: _currentStreamUrl,
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height * 0.5,
+                fit: BoxFit.contain,
+                showLiveIcon: true,
+              ),
+            ),
           ),
-
           // PTZ Controls (if applicable)
           if (widget.isPTZ) const PTZControls(),
         ],
@@ -163,11 +109,27 @@ class _CameraStreamState extends State<CameraStream> {
 }
 
 class PTZControls extends StatelessWidget {
-  const PTZControls({super.key});
+  const PTZControls({Key? key}) : super(key: key);
 
-  void sendPTZCommand(String command) {
-    // TODO: Implement API call for PTZ control in the future
-    print("PTZ Command Sent: $command");
+  // Update the server URL to point to the combined server on port 8000.
+  final String serverUrl = "http://10.40.42.211:8000";
+
+  Future<void> sendPTZCommand(String command) async {
+    try {
+      final response = await http.post(
+        Uri.parse(serverUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"command": command}),
+      );
+      if (response.statusCode == 200) {
+        print("Command sent successfully: $command");
+      } else {
+        print(
+            "Failed to send command: $command. Status: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error sending command $command: $e");
+    }
   }
 
   @override

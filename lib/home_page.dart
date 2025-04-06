@@ -39,8 +39,6 @@ class HomePage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (context) => const CameraStream(
                         cameraId: 1,
-                        // Optional: Pass initial URL if you want specific defaults
-                        // initialStreamUrl: "http://10.40.34.164:8080/hls/main.m3u8",
                       ),
                     ),
                   );
@@ -59,8 +57,6 @@ class HomePage extends StatelessWidget {
                       builder: (context) => const CameraStream(
                         cameraId: 2,
                         isPTZ: true,
-                        // Optional: Pass initial URL if you want specific defaults
-                        // initialStreamUrl: "http://10.40.34.164:8080/hls/ptz.m3u8",
                       ),
                     ),
                   );
