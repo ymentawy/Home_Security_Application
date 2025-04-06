@@ -4,8 +4,14 @@ import 'package:video_player/video_player.dart';
 class CameraStream extends StatefulWidget {
   final int cameraId;
   final bool isPTZ;
+  final String? initialStreamUrl;
 
-  const CameraStream({super.key, required this.cameraId, this.isPTZ = false});
+  const CameraStream({
+    super.key,
+    required this.cameraId,
+    this.isPTZ = false,
+    this.initialStreamUrl,
+  });
 
   @override
   _CameraStreamState createState() => _CameraStreamState();
@@ -15,17 +21,22 @@ class _CameraStreamState extends State<CameraStream> {
   late VideoPlayerController _controller;
   bool _isLoading = true;
   String? _errorMessage;
+  late TextEditingController _urlController;
+  late String _currentStreamUrl;
 
   @override
   void initState() {
     super.initState();
+    // Initialize with provided URL or default
+    _currentStreamUrl = widget.initialStreamUrl ?? _getDefaultStreamUrl();
+    _urlController = TextEditingController(text: _currentStreamUrl);
     _initializeVideo();
   }
 
-  /// 🚀 Modular function to get the correct stream URL based on `cameraId`
-  String _getStreamUrl() {
-    // 🔹 Both Main Camera & PTZ Camera now use OBS HLS
-    return "http://192.168.1.14:8080/hls/test.m3u8"; // OBS HLS URL
+  /// Get the default stream URL based on cameraId
+  String _getDefaultStreamUrl() {
+    // Default OBS HLS URL
+    return "http://10.40.34.164:8080/hls/test.m3u8";
   }
 
   void _initializeVideo() {
@@ -34,9 +45,7 @@ class _CameraStreamState extends State<CameraStream> {
       _errorMessage = null;
     });
 
-    String streamUrl = _getStreamUrl(); // Get the correct URL dynamically
-
-    _controller = VideoPlayerController.networkUrl(Uri.parse(streamUrl))
+    _controller = VideoPlayerController.networkUrl(Uri.parse(_currentStreamUrl))
       ..initialize().then((_) {
         setState(() {
           _isLoading = false;
@@ -45,14 +54,39 @@ class _CameraStreamState extends State<CameraStream> {
       }).catchError((error) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Failed to load stream. Please check the connection.";
+          _errorMessage =
+              "Failed to load stream. Please check the URL or connection.";
         });
       });
+  }
+
+  void _updateStream() {
+    // Get the new URL from the text controller
+    final newUrl = _urlController.text.trim();
+
+    // Check if URL is valid
+    if (newUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid URL')),
+      );
+      return;
+    }
+
+    // Dispose of the old controller
+    _controller.dispose();
+
+    // Update the current URL and reinitialize
+    setState(() {
+      _currentStreamUrl = newUrl;
+    });
+
+    _initializeVideo();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
@@ -62,6 +96,32 @@ class _CameraStreamState extends State<CameraStream> {
       appBar: AppBar(title: Text('Camera ${widget.cameraId}')),
       body: Column(
         children: [
+          // URL Input Field
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _urlController,
+                    decoration: const InputDecoration(
+                      labelText: 'Stream URL',
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter stream URL (HLS, RTSP, etc.)',
+                    ),
+                    onSubmitted: (_) => _updateStream(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _updateStream,
+                  child: const Text('Load'),
+                ),
+              ],
+            ),
+          ),
+
+          // Video Player
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -93,6 +153,8 @@ class _CameraStreamState extends State<CameraStream> {
                         ),
                       ),
           ),
+
+          // PTZ Controls (if applicable)
           if (widget.isPTZ) const PTZControls(),
         ],
       ),
