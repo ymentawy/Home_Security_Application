@@ -1,7 +1,10 @@
+// lib/settings.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'notification_service.dart'; // ← add this
 import 'change_password_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -19,18 +22,27 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const String _defaultPiIp = '10.40.47.58';
+
   late bool isDarkMode;
   bool isNotificationsEnabled = true;
   String language = "English";
+  String piIp = _defaultPiIp;
 
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  late TextEditingController _ipController;
 
   @override
   void initState() {
     super.initState();
     isDarkMode = widget.isDarkMode;
-    _requestNotificationPermission(); // Request notification permission
+
+    // Initialize local notifications plugin
+    NotificationService.instance.initPlugin();
+
+    _requestNotificationPermission();
     _initializeNotifications();
     _loadNotificationPreference();
   }
@@ -42,17 +54,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  /// Initializes notifications and sets up a notification channel
+  /// Initializes local notifications and sets up a channel
   void _initializeNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+    final InitializationSettings initSettings =
+        InitializationSettings(android: androidSettings);
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
 
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'notifications_channel',
@@ -61,14 +71,14 @@ class _SettingsPageState extends State<SettingsPage> {
       importance: Importance.high,
     );
 
-    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+    final androidImpl =
         flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidImplementation?.createNotificationChannel(channel);
+    await androidImpl?.createNotificationChannel(channel);
   }
 
-  /// Shows a notification when notifications are enabled
+  /// Shows a confirmation notification
   Future<void> _showNotification() async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -91,18 +101,34 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// Loads the saved notification preference
+  /// Loads saved preferences (notifications + Pi IP)
   Future<void> _loadNotificationPreference() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool('notifications_enabled') ?? true;
+    final ip = prefs.getString('pi_ip') ?? _defaultPiIp;
+
     setState(() {
-      isNotificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      isNotificationsEnabled = enabled;
+      piIp = ip;
     });
+
+    if (isNotificationsEnabled) {
+      NotificationService.instance.enableNotifications('ws://$piIp:8765');
+    } else {
+      NotificationService.instance.disableNotifications();
+    }
   }
 
-  /// Saves the notification preference
+  /// Saves only the notification preference
   Future<void> _saveNotificationPreference(bool value) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications_enabled', value);
+  }
+
+  /// Saves only the Pi IP address
+  Future<void> _savePiIp(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('pi_ip', value);
   }
 
   /// Handles Factory Reset
@@ -110,14 +136,13 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Factory Reset"),
-        content: Text("This will reset all settings to default. Proceed?"),
+        title: const Text("Factory Reset"),
+        content:
+            const Text("This will reset all settings to default. Proceed?"),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text("Cancel"),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
           ElevatedButton(
             onPressed: () {
@@ -125,15 +150,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 isDarkMode = false;
                 isNotificationsEnabled = true;
                 language = "English";
+                piIp = _defaultPiIp;
               });
               widget.onDarkModeChanged(false);
               _saveNotificationPreference(true);
+              _savePiIp(_defaultPiIp);
+              NotificationService.instance
+                  .enableNotifications('ws://$_defaultPiIp:8765');
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Factory reset completed!")),
+                const SnackBar(content: Text("Factory reset completed!")),
               );
             },
-            child: Text("Confirm"),
+            child: const Text("Confirm"),
           ),
         ],
       ),
@@ -144,18 +173,19 @@ class _SettingsPageState extends State<SettingsPage> {
   void navigateToChangePassword() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ChangePasswordPage()),
+      MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Settings')),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         children: [
           SwitchListTile(
+            title: const Text('Dark Mode'),
             value: isDarkMode,
             onChanged: (value) {
               setState(() {
@@ -163,27 +193,76 @@ class _SettingsPageState extends State<SettingsPage> {
               });
               widget.onDarkModeChanged(value);
             },
-            title: Text('Dark Mode'),
           ),
+
+          // Notification toggle
           SwitchListTile(
+            title: const Text('Enable Notifications'),
             value: isNotificationsEnabled,
-            onChanged: (value) {
+            onChanged: (value) async {
               setState(() {
                 isNotificationsEnabled = value;
-                _saveNotificationPreference(value);
-                if (value) {
-                  _showNotification();
-                }
               });
+              await _saveNotificationPreference(value);
+              if (value) {
+                await _showNotification();
+                NotificationService.instance
+                    .enableNotifications('ws://$piIp:8765');
+              } else {
+                NotificationService.instance.disableNotifications();
+              }
             },
-            title: Text('Enable Notifications'),
           ),
+
+          // Pi IP address picker
           ListTile(
-            leading: Icon(Icons.language),
-            title: Text("Language"),
+            leading: const Icon(Icons.device_hub),
+            title: const Text('Pi IP Address'),
+            subtitle: Text(piIp),
+            onTap: () {
+              _ipController = TextEditingController(text: piIp);
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Set Pi IP Address'),
+                  content: TextField(
+                    controller: _ipController,
+                    decoration:
+                        const InputDecoration(hintText: 'e.g. 192.168.1.100'),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final newIp = _ipController.text.trim();
+                        if (newIp.isNotEmpty) {
+                          _savePiIp(newIp);
+                          setState(() => piIp = newIp);
+                          if (isNotificationsEnabled) {
+                            NotificationService.instance.disableNotifications();
+                            NotificationService.instance
+                                .enableNotifications('ws://$piIp:8765');
+                          }
+                        }
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: const Text("Language"),
             trailing: DropdownButton<String>(
               value: language,
-              items: ["English", "Spanish", "French"]
+              items: const ["English", "Spanish", "French"]
                   .map((lang) => DropdownMenuItem(
                         value: lang,
                         child: Text(lang),
@@ -196,14 +275,16 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
+
           ListTile(
-            leading: Icon(Icons.lock),
-            title: Text("Change Password"),
+            leading: const Icon(Icons.lock),
+            title: const Text("Change Password"),
             onTap: navigateToChangePassword,
           ),
+
           ListTile(
-            leading: Icon(Icons.restore),
-            title: Text("Factory Reset"),
+            leading: const Icon(Icons.restore),
+            title: const Text("Factory Reset"),
             onTap: factoryReset,
           ),
         ],

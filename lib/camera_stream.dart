@@ -26,26 +26,20 @@ class _CameraStreamState extends State<CameraStream> {
   @override
   void initState() {
     super.initState();
-    // Initialize with provided URL or default MJPEG URL
     _currentStreamUrl = widget.initialStreamUrl ?? _getDefaultStreamUrl();
     _urlController = TextEditingController(text: _currentStreamUrl);
   }
 
-  /// Get the default stream URL (MJPEG stream URL)
-  String _getDefaultStreamUrl() {
-    return "http://10.40.42.211:8000";
-  }
+  String _getDefaultStreamUrl() => "http://10.40.47.58:8000";
 
   void _updateStream() {
     final newUrl = _urlController.text.trim();
-
     if (newUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid URL')),
       );
       return;
     }
-
     setState(() {
       _currentStreamUrl = newUrl;
     });
@@ -59,12 +53,11 @@ class _CameraStreamState extends State<CameraStream> {
 
   @override
   Widget build(BuildContext context) {
-    // Layout: URL input at the top, MJPEG stream in the middle, and PTZ controls (if enabled) at the bottom.
     return Scaffold(
       appBar: AppBar(title: Text('Camera ${widget.cameraId}')),
       body: Column(
         children: [
-          // URL Input Field
+          // URL input + Load button
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -88,20 +81,25 @@ class _CameraStreamState extends State<CameraStream> {
               ],
             ),
           ),
-          // MJPEG Stream Display
+
+          // MJPEG Stream (wrapped in KeyedSubtree so it rebuilds on URL change)
           Expanded(
             child: Center(
-              child: MJPEGStreamScreen(
-                streamUrl: _currentStreamUrl,
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height * 0.5,
-                fit: BoxFit.contain,
-                showLiveIcon: true,
+              child: KeyedSubtree(
+                key: ValueKey(_currentStreamUrl),
+                child: MJPEGStreamScreen(
+                  streamUrl: _currentStreamUrl,
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  fit: BoxFit.contain,
+                  showLiveIcon: true,
+                ),
               ),
             ),
           ),
-          // PTZ Controls (if applicable)
-          if (widget.isPTZ) const PTZControls(),
+
+          // PTZ Controls (if enabled)
+          if (widget.isPTZ) PTZControls(serverUrl: _currentStreamUrl),
         ],
       ),
     );
@@ -109,10 +107,9 @@ class _CameraStreamState extends State<CameraStream> {
 }
 
 class PTZControls extends StatelessWidget {
-  const PTZControls({Key? key}) : super(key: key);
+  final String serverUrl;
 
-  // Update the server URL to point to the combined server on port 8000.
-  final String serverUrl = "http://10.40.42.211:8000";
+  const PTZControls({Key? key, required this.serverUrl}) : super(key: key);
 
   Future<void> sendPTZCommand(String command) async {
     try {
@@ -122,13 +119,14 @@ class PTZControls extends StatelessWidget {
         body: jsonEncode({"command": command}),
       );
       if (response.statusCode == 200) {
-        print("Command sent successfully: $command");
+        debugPrint("Command sent successfully: $command");
       } else {
-        print(
-            "Failed to send command: $command. Status: ${response.statusCode}");
+        debugPrint(
+          "Failed to send command: $command. Status: ${response.statusCode}",
+        );
       }
     } catch (e) {
-      print("Error sending command $command: $e");
+      debugPrint("Error sending command $command: $e");
     }
   }
 
