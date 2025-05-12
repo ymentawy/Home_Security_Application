@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mjpeg_stream/mjpeg_stream.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'settings.dart';
 
 class CameraStream extends StatefulWidget {
   final int cameraId;
@@ -22,15 +24,28 @@ class CameraStream extends StatefulWidget {
 class _CameraStreamState extends State<CameraStream> {
   late TextEditingController _urlController;
   late String _currentStreamUrl;
+  late String _piIp;
+  late int _streamPort;
 
   @override
   void initState() {
     super.initState();
-    _currentStreamUrl = widget.initialStreamUrl ?? _getDefaultStreamUrl();
-    _urlController = TextEditingController(text: _currentStreamUrl);
+    _loadConfig();
   }
 
-  String _getDefaultStreamUrl() => "http://10.40.47.58:8000";
+  Future<void> _loadConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    _piIp = prefs.getString('pi_ip') ?? PiConfig.defaultPiIp;
+    _streamPort = widget.isPTZ
+        ? (prefs.getInt('ptz_stream_port') ?? PiConfig.defaultPtzStreamPort)
+        : (prefs.getInt('main_stream_port') ?? PiConfig.defaultMainStreamPort);
+
+    _currentStreamUrl = widget.initialStreamUrl ?? _getDefaultStreamUrl();
+    _urlController = TextEditingController(text: _currentStreamUrl);
+    setState(() {});
+  }
+
+  String _getDefaultStreamUrl() => "http://$_piIp:$_streamPort";
 
   void _updateStream() {
     final newUrl = _urlController.text.trim();

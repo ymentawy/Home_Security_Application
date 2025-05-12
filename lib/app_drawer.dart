@@ -7,6 +7,7 @@ import 'login_page.dart';
 import 'profile_page.dart';
 import 'settings.dart';
 import 'main.dart';
+import 'recordings_page.dart';
 
 class AppDrawer extends StatefulWidget {
   final User? user;
@@ -116,6 +117,18 @@ class _AppDrawerState extends State<AppDrawer> {
                         ),
                       );
                     }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.video_library),
+                  title: const Text('Recordings'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const RecordingsPage(),
+                      ),
+                    );
                   },
                 ),
                 ListTile(
