@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+typedef NotificationCallback = void Function(String title, String body);
+
 class NotificationService {
   // Singleton pattern
   NotificationService._internal();
@@ -11,6 +13,16 @@ class NotificationService {
   bool _isListening = false;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  
+  final List<NotificationCallback> _callbacks = [];
+
+  void addNotificationListener(NotificationCallback callback) {
+    _callbacks.add(callback);
+  }
+
+  void removeNotificationListener(NotificationCallback callback) {
+    _callbacks.remove(callback);
+  }
 
   /// Call once at app start to set up notification plugin
   Future<void> initPlugin() async {
@@ -90,6 +102,12 @@ class NotificationService {
 
   Future<void> _showNotification(String title, String body) async {
     print('🏷️ Showing notification: title="$title", body="$body"');
+    
+    // Notify all listeners
+    for (final callback in _callbacks) {
+      callback(title, body);
+    }
+
     const androidDetails = AndroidNotificationDetails(
       'pi_notifications',
       'Pi Notifications',

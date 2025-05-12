@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'app_drawer.dart';
 import 'camera_stream.dart';
+import 'notification_button.dart';
 
 class HomePage extends StatelessWidget {
   final User? user;
@@ -12,7 +13,12 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('NEUROVISION')),
+      appBar: AppBar(
+        title: const Text('NEUROVISION'),
+        actions: const [
+          NotificationButton(),
+        ],
+      ),
       drawer: AppDrawer(user: user, userProfile: userProfile),
       body: Center(
         child: Padding(
