@@ -30,6 +30,7 @@ dependencies:
   flutter_vlc_player: ^7.4.3
   mjpeg_stream: ^1.0.1
   web_socket_channel: ^3.0.3
+  intl: ^0.19.0
 
 dependency_overrides:
   flutter_local_notifications_linux: null

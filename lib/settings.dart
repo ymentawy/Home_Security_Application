@@ -8,11 +8,14 @@ import 'notification_service.dart';
 import 'change_password_page.dart';
 
 class PiConfig {
-  static const String defaultPiIp = '10.40.47.58';
+  static const String defaultPiIp = '10.40.43.16';
   static const int defaultMainStreamPort = 8001;
   static const int defaultPtzStreamPort = 8000;
   static const int defaultNotificationsPort = 8765;
-  static const String defaultRecordingsPath = '/yoloBT/records';
+  static const int defaultRecordingsPort =
+      8002; // New default port for recordings
+  static const String defaultRecordingsPath =
+      '/yoloBT/records'; // Full path to match server configuration
 }
 
 class SettingsPage extends StatefulWidget {
@@ -39,6 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
   int mainStreamPort = PiConfig.defaultMainStreamPort;
   int ptzStreamPort = PiConfig.defaultPtzStreamPort;
   int notificationsPort = PiConfig.defaultNotificationsPort;
+  int recordingsPort = PiConfig.defaultRecordingsPort;
   String recordingsPath = PiConfig.defaultRecordingsPath;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -48,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _mainPortController;
   late TextEditingController _ptzPortController;
   late TextEditingController _notifPortController;
+  late TextEditingController _recordingsPortController;
   late TextEditingController _recordingsPathController;
 
   @override
@@ -71,6 +76,8 @@ class _SettingsPageState extends State<SettingsPage> {
           prefs.getInt('ptz_stream_port') ?? PiConfig.defaultPtzStreamPort;
       notificationsPort = prefs.getInt('notifications_port') ??
           PiConfig.defaultNotificationsPort;
+      recordingsPort =
+          prefs.getInt('recordings_port') ?? PiConfig.defaultRecordingsPort;
       recordingsPath =
           prefs.getString('recordings_path') ?? PiConfig.defaultRecordingsPath;
     });
@@ -87,6 +94,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setInt('main_stream_port', mainStreamPort);
     await prefs.setInt('ptz_stream_port', ptzStreamPort);
     await prefs.setInt('notifications_port', notificationsPort);
+    await prefs.setInt('recordings_port', recordingsPort);
     await prefs.setString('recordings_path', recordingsPath);
   }
 
@@ -179,6 +187,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 mainStreamPort = PiConfig.defaultMainStreamPort;
                 ptzStreamPort = PiConfig.defaultPtzStreamPort;
                 notificationsPort = PiConfig.defaultNotificationsPort;
+                recordingsPort = PiConfig.defaultRecordingsPort;
                 recordingsPath = PiConfig.defaultRecordingsPath;
               });
               widget.onDarkModeChanged(false);
@@ -212,6 +221,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _ptzPortController = TextEditingController(text: ptzStreamPort.toString());
     _notifPortController =
         TextEditingController(text: notificationsPort.toString());
+    _recordingsPortController =
+        TextEditingController(text: recordingsPort.toString());
     _recordingsPathController = TextEditingController(text: recordingsPath);
 
     showDialog(
@@ -244,6 +255,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 keyboardType: TextInputType.number,
               ),
               TextField(
+                controller: _recordingsPortController,
+                decoration: const InputDecoration(labelText: 'Recordings Port'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
                 controller: _recordingsPathController,
                 decoration: const InputDecoration(labelText: 'Recordings Path'),
               ),
@@ -265,6 +281,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     PiConfig.defaultPtzStreamPort;
                 notificationsPort = int.tryParse(_notifPortController.text) ??
                     PiConfig.defaultNotificationsPort;
+                recordingsPort = int.tryParse(_recordingsPortController.text) ??
+                    PiConfig.defaultRecordingsPort;
                 recordingsPath = _recordingsPathController.text.trim();
               });
               _saveAllPreferences();

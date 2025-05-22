@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 
-typedef NotificationCallback = void Function(String title, String body);
+// Update callback to include a tap handler
+typedef NotificationCallback = void Function(
+    String title, String body, VoidCallback onTap);
 
 class NotificationService {
   // Singleton pattern
@@ -13,8 +16,18 @@ class NotificationService {
   bool _isListening = false;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  
+
   final List<NotificationCallback> _callbacks = [];
+
+  // Store navigation key
+  static GlobalKey<NavigatorState>? navigatorKey;
+
+  // Navigate to recordings page
+  void _navigateToRecordings() {
+    if (navigatorKey?.currentState != null) {
+      navigatorKey!.currentState!.pushNamed('/recordings');
+    }
+  }
 
   void addNotificationListener(NotificationCallback callback) {
     _callbacks.add(callback);
@@ -32,12 +45,33 @@ class NotificationService {
       requestSoundPermission: true,
       requestAlertPermission: true,
       requestBadgePermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'motion_detection',
+          actions: [
+            DarwinNotificationAction.plain(
+              'view_recording',
+              'View Recording',
+              options: {
+                DarwinNotificationActionOption.foreground,
+              },
+            ),
+          ],
+        ),
+      ],
     );
     final initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
-    await _localNotifications.initialize(initSettings);
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _navigateToRecordings();
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
 
     const channel = AndroidNotificationChannel(
       'pi_notifications',
@@ -77,6 +111,7 @@ class NotificationService {
         },
         onError: (err) {
           print('❌ WS error: $err');
+          _isListening = false;
         },
         onDone: () {
           print('⚠️ WS connection closed');
@@ -102,10 +137,10 @@ class NotificationService {
 
   Future<void> _showNotification(String title, String body) async {
     print('🏷️ Showing notification: title="$title", body="$body"');
-    
-    // Notify all listeners
+
+    // Notify all listeners with tap handler
     for (final callback in _callbacks) {
-      callback(title, body);
+      callback(title, body, _navigateToRecordings);
     }
 
     const androidDetails = AndroidNotificationDetails(
@@ -114,16 +149,43 @@ class NotificationService {
       channelDescription: 'Alerts from your Raspberry Pi',
       importance: Importance.max,
       priority: Priority.high,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          'view_recording',
+          'View Recording',
+          showsUserInterface: true,
+          cancelNotification: false,
+        ),
+      ],
     );
-    final iosDetails = DarwinNotificationDetails();
+
+    final iosDetails = DarwinNotificationDetails(
+      categoryIdentifier: 'motion_detection',
+    );
+
     final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
+
     try {
-      await _localNotifications.show(0, title, body, details);
+      await _localNotifications.show(
+        0,
+        title,
+        body,
+        details,
+        payload: 'recordings_page',
+      );
     } catch (e) {
       print('❌ Error showing local notification: $e');
     }
+  }
+}
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse response) {
+  // Handle notification tap in background
+  if (NotificationService.navigatorKey?.currentState != null) {
+    NotificationService.navigatorKey!.currentState!.pushNamed('/recordings');
   }
 }

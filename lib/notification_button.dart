@@ -48,17 +48,18 @@ class _NotificationButtonState extends State<NotificationButton> {
     await _prefs.setString('notifications', json.encode(notifications));
   }
 
-  void _handleNotification(String title, String body) {
-    addNotification(title, body);
+  void _handleNotification(String title, String body, VoidCallback onTap) {
+    addNotification(title, body, onTap);
   }
 
-  void addNotification(String title, String body) {
+  void addNotification(String title, String body, VoidCallback? onTap) {
     setState(() {
       notifications.insert(0, {
         'title': title,
         'body': body,
         'timestamp': DateTime.now().toIso8601String(),
         'read': false,
+        'onTap': onTap,
       });
       unreadCount++;
       _saveNotifications();
@@ -101,6 +102,7 @@ class _NotificationButtonState extends State<NotificationButton> {
                       _saveNotifications();
                     }
                   });
+                  notification['onTap']?.call();
                 },
               );
             },

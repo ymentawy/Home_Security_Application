@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'settings.dart';
 
@@ -30,10 +31,27 @@ class _RecordingsPageState extends State<RecordingsPage> {
     _loadConfig();
   }
 
+  String _formatDateTime(String fileName) {
+    try {
+      // Extract date and time from filename (assuming format like "2024-03-21_14-30-00.mp4")
+      final dateStr = fileName.substring(0, fileName.length - 4); // Remove .mp4
+      final parts = dateStr.split('_');
+      if (parts.length != 2) return fileName;
+
+      final datePart = parts[0];
+      final timePart = parts[1].replaceAll('-', ':');
+
+      final dateTime = DateTime.parse('${datePart}T${timePart}');
+      return DateFormat('MMM d, y - h:mm:ss a').format(dateTime);
+    } catch (e) {
+      return fileName; // Return original filename if parsing fails
+    }
+  }
+
   Future<void> _loadConfig() async {
     final prefs = await SharedPreferences.getInstance();
     _piIp = prefs.getString('pi_ip') ?? PiConfig.defaultPiIp;
-    _port = prefs.getInt('main_stream_port') ?? PiConfig.defaultMainStreamPort;
+    _port = prefs.getInt('recordings_port') ?? PiConfig.defaultRecordingsPort;
     _recordingsPath =
         prefs.getString('recordings_path') ?? PiConfig.defaultRecordingsPath;
     _fetchRecordings();
@@ -49,7 +67,7 @@ class _RecordingsPageState extends State<RecordingsPage> {
   Future<void> _fetchRecordings() async {
     try {
       final response = await http.get(
-        Uri.parse('http://$_piIp:$_port/list_recordings?path=$_recordingsPath'),
+        Uri.parse('http://$_piIp:$_port/list_recordings'),
       );
 
       if (response.statusCode == 200) {
@@ -83,9 +101,11 @@ class _RecordingsPageState extends State<RecordingsPage> {
     });
 
     try {
-      final videoController = VideoPlayerController.network(
-        'http://$_piIp:$_port$_recordingsPath/$fileName',
-      );
+      print('Attempting to play video: $fileName');
+      final videoUrl = 'http://$_piIp:$_port$_recordingsPath/$fileName';
+      print('Video URL: $videoUrl');
+
+      final videoController = VideoPlayerController.network(videoUrl);
 
       await videoController.initialize();
 
@@ -95,6 +115,7 @@ class _RecordingsPageState extends State<RecordingsPage> {
         looping: false,
         aspectRatio: videoController.value.aspectRatio,
         errorBuilder: (context, errorMessage) {
+          print('Video Error: $errorMessage');
           return Center(
             child: Text(
               'Error: $errorMessage',
@@ -109,6 +130,7 @@ class _RecordingsPageState extends State<RecordingsPage> {
         _chewieController = chewieController;
       });
     } catch (e) {
+      print('Error playing video: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error playing video: $e')),
@@ -122,6 +144,12 @@ class _RecordingsPageState extends State<RecordingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recordings'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchRecordings,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -139,9 +167,11 @@ class _RecordingsPageState extends State<RecordingsPage> {
                         itemCount: recordings.length,
                         itemBuilder: (context, index) {
                           final fileName = recordings[index];
+                          final formattedDate = _formatDateTime(fileName);
                           return ListTile(
                             leading: const Icon(Icons.video_library),
-                            title: Text(fileName),
+                            title: Text(formattedDate),
+                            subtitle: Text(fileName),
                             onTap: () => _playVideo(fileName),
                             selected: currentlyPlaying == fileName,
                           );

@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'login_page.dart';
+import 'recordings_page.dart';
+import 'notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize notification service navigator key
+  NotificationService.navigatorKey = GlobalKey<NavigatorState>();
+
   runApp(const HomeSecurityApp());
 }
 
@@ -31,9 +39,14 @@ class HomeSecurityAppState extends State<HomeSecurityApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: NotificationService.navigatorKey, // Add navigator key
       title: 'Home Security System',
       theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-      home: const SplashScreen(), // Start with SplashScreen
+      home: const SplashScreen(),
+      routes: {
+        '/recordings': (context) =>
+            const RecordingsPage(), // Add recordings route
+      },
     );
   }
 }
