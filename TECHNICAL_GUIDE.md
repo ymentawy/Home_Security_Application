@@ -14,7 +14,6 @@ This guide is intended for technical users working with the development/prototyp
 - Mobile device for running the application
 - Both devices must be connected to the same local network
 - Python installed on the Raspberry Pi
-- Required Python dependencies (listed in requirements.txt)
 
 ## Setup Instructions
 
@@ -30,7 +29,7 @@ This guide is intended for technical users working with the development/prototyp
 ### Raspberry Pi Setup
 
 #### 1. Main Server Setup
-1. Navigate to the project directory on your Raspberry Pi
+1. Navigate to the directory where servers.py is on your Raspberry Pi
 2. Run the main server file:
    ```bash
    python servers.py
@@ -46,9 +45,9 @@ This guide is intended for technical users working with the development/prototyp
    python ptz.py
    ```
    This initiates:
-   - The AI model for Human Activity Recognition (HAR)
+   - All AI models on the PI
    - The notification server
-   - When the HAR model detects an anomaly, the notification server automatically sends alerts to the mobile application
+   - When the (Human Activity Recognition) HAR model detects an anomaly, the notification server automatically sends alerts to the mobile application
 
 ## Important Notes
 
